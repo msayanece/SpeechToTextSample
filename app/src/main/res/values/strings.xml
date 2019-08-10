@@ -1,0 +1,12 @@
+<resources>
+    <string name="app_name">VoiceCommand</string>
+    <string name="speech_prompt">Talk</string>
+    <string name="speech_not_supported">Unsupported speech recognized. Unable to process</string>
+    <string name="button">Start Listening</string>
+
+    //Alert dialog
+    <string name="retry_text">Retry</string>
+    <string name="ready_to_speak">Speak now: I am listening…</string>
+    <string name="ready_to_speak_title">Listening…</string>
+    <string name="your_command_will_appear_here">Your command will appear here</string>
+</resources>
