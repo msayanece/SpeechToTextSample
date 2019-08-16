@@ -17,11 +17,17 @@ import android.view.View
 import androidx.core.content.ContextCompat
 import kotlinx.android.synthetic.main.activity_main.*
 import java.util.*
+import android.speech.tts.TextToSpeech
+import android.speech.tts.TextToSpeech.SUCCESS
+import android.speech.tts.UtteranceProgressListener
+import android.media.AudioManager
+import kotlin.collections.HashMap
 
 
 class MainActivity : AppCompatActivity() {
     //SpeechRecognizer property
-    lateinit var mSpeechRecognizer: SpeechRecognizer
+    private lateinit var mSpeechRecognizer: SpeechRecognizer
+    private lateinit var textToSpeech: TextToSpeech
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -30,6 +36,14 @@ class MainActivity : AppCompatActivity() {
          * SpeechRecognizer related
          */
         initializeSpeechRecognizer()
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        if (::textToSpeech.isInitialized){
+            textToSpeech.stop()
+            textToSpeech.shutdown()
+        }
     }
 
     /**
@@ -53,14 +67,20 @@ class MainActivity : AppCompatActivity() {
         //RECORD_AUDIO permission dynamic checking
         checkPermission()
         mSpeechRecognizer.setRecognitionListener(object : SpeechRecognitionListener(this) {
+
             override fun onResults(results: Bundle?) {
                 this.dialog.dismiss()
                 //getting all the matches
                 val matches = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
 
                 //displaying the first match
-                if (matches != null)
-                    speechText.text = matches[0]
+                if (matches != null) {
+                    val text = matches[0]
+                    speechText.text = text
+                    val checkIntent = Intent()
+                    checkIntent.action = TextToSpeech.Engine.ACTION_CHECK_TTS_DATA
+                    startActivityForResult(checkIntent, 1234)
+                }
             }
         })
     }
@@ -122,7 +142,51 @@ class MainActivity : AppCompatActivity() {
                 Toast.LENGTH_SHORT
             ).show()
         }
+    }
 
+    private fun speakNow(speakText: String) {
+        if (::textToSpeech.isInitialized) {
+            textToSpeech = TextToSpeech(this@MainActivity,
+                TextToSpeech.OnInitListener { status ->
+                    if (status == SUCCESS) {
+                        println("TextToSpeech successfully initiated")
+                        textToSpeech.language = Locale.US
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                            val bundle = Bundle()
+                            bundle.putInt(TextToSpeech.Engine.KEY_PARAM_STREAM, AudioManager.STREAM_MUSIC)
+                            val speakResult = textToSpeech.speak(speakText, TextToSpeech.QUEUE_FLUSH, bundle, "123")
+                            if (speakResult == SUCCESS) {
+                                println("successfully spoke")
+                            } else {
+                                println("could not speak")
+                            }
+                            textToSpeech.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
+                                override fun onDone(utteranceId: String?) {
+                                    if (utteranceId.equals("123"))
+                                        println("textToSpeech DONE")
+                                }
+
+                                override fun onError(utteranceId: String?) {
+                                    if (utteranceId.equals("123"))
+                                        println("textToSpeech error")
+                                }
+
+                                override fun onStart(utteranceId: String?) {
+                                    if (utteranceId.equals("123"))
+                                        println("started To Speech")
+                                }
+
+                            })
+                        } else {
+                            val params: HashMap<String, String> = HashMap()
+                            params[TextToSpeech.Engine.KEY_PARAM_STREAM] = AudioManager.STREAM_MUSIC.toString()
+                            textToSpeech.speak(speakText, TextToSpeech.QUEUE_ADD, params)
+                        }
+                    } else {
+                        println("TextToSpeech initiation failed")
+                    }
+                })
+        }
     }
 
     /**
@@ -138,6 +202,19 @@ class MainActivity : AppCompatActivity() {
                     val result = data
                         .getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS)
                     speechText.text = result[0]
+                }
+            }
+            1234 -> {
+                if (resultCode == TextToSpeech.Engine.CHECK_VOICE_DATA_PASS) {
+                    // success, create the TTS instance
+                    println("TTS supported")
+                    speakNow(speechText.text.toString())
+                } else {
+                    println("TTS not supported")
+                    // missing data, install it
+                    val installIntent: Intent = Intent()
+                    installIntent.action = TextToSpeech.Engine.ACTION_INSTALL_TTS_DATA
+                    startActivity(installIntent)
                 }
             }
         }
