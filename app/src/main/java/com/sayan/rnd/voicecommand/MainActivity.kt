@@ -40,7 +40,7 @@ class MainActivity : AppCompatActivity() {
 
     override fun onDestroy() {
         super.onDestroy()
-        if (::textToSpeech.isInitialized){
+        if (::textToSpeech.isInitialized) {
             textToSpeech.stop()
             textToSpeech.shutdown()
         }
@@ -52,7 +52,6 @@ class MainActivity : AppCompatActivity() {
     fun getVoiceInput(view: View) {
         //use speech recognizer
         openSpeechRecognizer()
-
         /*
         //use google speech input
         promptSpeechInput()
@@ -95,7 +94,10 @@ class MainActivity : AppCompatActivity() {
                     Manifest.permission.RECORD_AUDIO
                 ) != PackageManager.PERMISSION_GRANTED
             ) {
-                val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:" + packageName))
+                val intent = Intent(
+                    Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                    Uri.parse("package:" + packageName)
+                )
                 startActivity(intent)
                 finish()
             }
@@ -145,48 +147,53 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun speakNow(speakText: String) {
-        if (::textToSpeech.isInitialized) {
-            textToSpeech = TextToSpeech(this@MainActivity,
-                TextToSpeech.OnInitListener { status ->
-                    if (status == SUCCESS) {
-                        println("TextToSpeech successfully initiated")
-                        textToSpeech.language = Locale.US
-                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-                            val bundle = Bundle()
-                            bundle.putInt(TextToSpeech.Engine.KEY_PARAM_STREAM, AudioManager.STREAM_MUSIC)
-                            val speakResult = textToSpeech.speak(speakText, TextToSpeech.QUEUE_FLUSH, bundle, "123")
-                            if (speakResult == SUCCESS) {
-                                println("successfully spoke")
-                            } else {
-                                println("could not speak")
-                            }
-                            textToSpeech.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
-                                override fun onDone(utteranceId: String?) {
-                                    if (utteranceId.equals("123"))
-                                        println("textToSpeech DONE")
-                                }
-
-                                override fun onError(utteranceId: String?) {
-                                    if (utteranceId.equals("123"))
-                                        println("textToSpeech error")
-                                }
-
-                                override fun onStart(utteranceId: String?) {
-                                    if (utteranceId.equals("123"))
-                                        println("started To Speech")
-                                }
-
-                            })
+        println("TextToSpeech speak now")
+        textToSpeech = TextToSpeech(this@MainActivity,
+            TextToSpeech.OnInitListener { status ->
+                if (status == SUCCESS) {
+                    println("TextToSpeech successfully initiated")
+                    textToSpeech.language = Locale.getDefault()
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                        val bundle = Bundle()
+                        bundle.putInt(
+                            TextToSpeech.Engine.KEY_PARAM_STREAM,
+                            AudioManager.STREAM_MUSIC
+                        )
+                        val speakResult =
+                            textToSpeech.speak(speakText, TextToSpeech.QUEUE_FLUSH, bundle, "123")
+                        if (speakResult == SUCCESS) {
+                            println("successfully spoke")
                         } else {
-                            val params: HashMap<String, String> = HashMap()
-                            params[TextToSpeech.Engine.KEY_PARAM_STREAM] = AudioManager.STREAM_MUSIC.toString()
-                            textToSpeech.speak(speakText, TextToSpeech.QUEUE_ADD, params)
+                            println("could not speak")
                         }
+                        textToSpeech.setOnUtteranceProgressListener(object :
+                            UtteranceProgressListener() {
+                            override fun onDone(utteranceId: String?) {
+                                if (utteranceId.equals("123"))
+                                    println("textToSpeech DONE")
+                            }
+
+                            override fun onError(utteranceId: String?) {
+                                if (utteranceId.equals("123"))
+                                    println("textToSpeech error")
+                            }
+
+                            override fun onStart(utteranceId: String?) {
+                                if (utteranceId.equals("123"))
+                                    println("started To Speech")
+                            }
+
+                        })
                     } else {
-                        println("TextToSpeech initiation failed")
+                        val params: HashMap<String, String> = HashMap()
+                        params[TextToSpeech.Engine.KEY_PARAM_STREAM] =
+                            AudioManager.STREAM_MUSIC.toString()
+                        textToSpeech.speak(speakText, TextToSpeech.QUEUE_ADD, params)
                     }
-                })
-        }
+                } else {
+                    println("TextToSpeech initiation failed")
+                }
+            })
     }
 
     /**
